@@ -31,7 +31,7 @@ class World:
         self.clear()
         # we've got listeners now!
         self.listeners = list()
-        
+
     def add_set_listener(self, listener):
         self.listeners.append( listener )
 
@@ -55,7 +55,7 @@ class World:
 
     def get(self, entity):
         return self.space.get(entity,dict())
-    
+
     def world(self):
         return self.space
 
@@ -75,13 +75,13 @@ class Client:
 
 def set_listener( entity, data ):
     ''' do something with the update ! '''
-    line = {}
-    line[entity] = data
+    element = {}
+    element[entity] = data
     for client in clients:
-        client.put(json.dumps(line))
+        client.put(json.dumps(element))
 
 myWorld.add_set_listener( set_listener )
-        
+
 @app.route('/')
 def hello():
     '''Return something coherent here.. perhaps redirect to /static/index.html '''
@@ -92,13 +92,13 @@ def read_ws(ws,client):
     # XXX: TODO IMPLEMENT ME
     try:
         while True:
-            msg = ws.receive()
-            print "WS RECV: %s" % msg
-            if (msg is not None):
-                packet = json.loads(msg)
+            message = ws.receive()
+            print "WS RECV: %s" % message
+            if (message is not None):
+                packet = json.loads(message)
                 print("Packet: %s" % packet)
                 for key in packet:
-                    myWorld.set(key, packet[key])   
+                    myWorld.set(key, packet[key])
             else:
                 break
     except:
@@ -111,14 +111,15 @@ def subscribe_socket(ws):
     # XXX: TODO IMPLEMENT ME
     client = Client()
     clients.append(client)
-    g = gevent.spawn( read_ws, ws, client )    
+    g = gevent.spawn( read_ws, ws, client )
     try:
         print "Subscribing"
+        ws.send(json.dumps(myWorld.world()))
         while True:
             # block here
-            msg = client.get()
+            message = client.get()
             print "Got a message!"
-            ws.send(msg)
+            ws.send(message)
     except Exception as e:# WebSocketError as e:
         print "WS Error %s" % e
     finally:
@@ -140,15 +141,15 @@ def flask_post_json():
 @app.route("/entity/<entity>", methods=['POST','PUT'])
 def update(entity):
     '''update the entities via this interface'''
-      
+
     return json.dumps(myWorld.get(entity))
 
-@app.route("/world", methods=['POST','GET'])    
+@app.route("/world", methods=['POST','GET'])
 def world():
     '''you should probably return the world here'''
-    return json.dumps(myWOrld.world())
+    return json.dumps(myWorld.world())
 
-@app.route("/entity/<entity>")    
+@app.route("/entity/<entity>")
 def get_entity(entity):
     '''This is the GET version of the entity interface, return a representation of the entity'''
     return json.dumps(myWorld.get(entity))
